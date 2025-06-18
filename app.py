@@ -13,8 +13,9 @@ class Note(BaseModel):
     title: str
     content: str
 
-@app.post("/notes")
-async def add(
+
+@app.post("/notes", status_code=201)
+async def add_notes(
         note: Note
 ):
     try:
@@ -27,12 +28,30 @@ async def add(
         print(e)
         return HTTPException(status_code=500)
 
+
 @app.get("/notes/{uid}")
 async def get_note(uid: str):
     try:
         async with aiofiles.open(f'notes/{uid}.md', mode='r') as f:
             content = await f.read()
             return HTMLResponse(content=content, status_code=200)
+    except FileNotFoundError as e:
+        return HTTPException(status_code=404, detail=f'Note {uid} not found')
+    except Exception as e:
+        print(e)
+        return HTTPException(status_code=500)
+
+
+@app.put("/notes/{uid}")
+async def update_note(
+        uid: str,
+        note: Note
+):
+    try:
+        output_html = markdown.markdown(note.content)
+        async with aiofiles.open(f'notes/{uid}.md', mode='w') as f:
+            await f.write(output_html)
+            return uid
     except FileNotFoundError as e:
         return HTTPException(status_code=404, detail=f'Note {uid} not found')
     except Exception as e:
